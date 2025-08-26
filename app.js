@@ -42,6 +42,50 @@ app.get("/signup", (req, res) => {
   res.render("signup", { title: "Sign Up" });
 });
 
+app.get("/login", (req, res) => {
+  res.render("login", { title: "Log In" });
+});
+
+app.post("/login", async (req, res) => {
+  const { email, password } = req.body || {};
+
+  if (!email || !password) {
+    return res.status(400).render("login", {
+      title: "Log In",
+      error: "Email and password are required."
+    });
+  }
+
+  try {
+    const selectSql = `SELECT id, password FROM users WHERE email = ? LIMIT 1`;
+    const [rows] = await dbPool.execute(selectSql, [email]);
+    const user = Array.isArray(rows) && rows.length > 0 ? rows[0] : null;
+
+    if (!user) {
+      return res.status(401).render("login", {
+        title: "Log In",
+        error: "Invalid email or password."
+      });
+    }
+
+    const isMatch = await bcrypt.compare(password, user.password);
+    if (!isMatch) {
+      return res.status(401).render("login", {
+        title: "Log In",
+        error: "Invalid email or password."
+      });
+    }
+
+    req.session.userId = user.id;
+    return res.redirect("/");
+  } catch (error) {
+    console.error("Login error:", error);
+    return res.status(500).render("login", {
+      title: "Log In",
+      error: error?.message || "An unexpected error occurred. Please try again."
+    });
+  }
+});
 app.post("/signup", async (req, res) => {
   const { username, email, password } = req.body || {};
 

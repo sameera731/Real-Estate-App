@@ -1,0 +1,14 @@
+# Node modules
+node_modules/
+
+# Environment variables file
+.env
+
+# Log files
+*.log
+
+# macOS system files
+.DS_Store
+
+# Windows system files
+Thumbs.db

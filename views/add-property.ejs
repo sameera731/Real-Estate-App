@@ -1,0 +1,64 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title><%= title || 'Add Property' %></title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <h1><%= title || 'Add Property' %></h1>
+    <form action="/add-property" method="post" enctype="multipart/form-data">
+      <div>
+        <label for="title">Title</label>
+        <input id="title" name="title" required />
+      </div>
+      <div>
+        <label for="description">Description</label>
+        <textarea id="description" name="description" rows="5" required></textarea>
+      </div>
+      <div>
+        <label for="price">Price</label>
+        <input id="price" name="price" type="number" step="0.01" min="0" required />
+      </div>
+      <div>
+        <label for="area_sqm">Area (sqm)</label>
+        <input id="area_sqm" name="area_sqm" type="number" step="0.01" min="0" required />
+      </div>
+      <div>
+        <label for="property_type">Property Type</label>
+        <select id="property_type" name="property_type" required>
+          <option value="">Select type</option>
+          <option value="apartment">Apartment</option>
+          <option value="house">House</option>
+          <option value="land">Land</option>
+          <option value="commercial">Commercial</option>
+        </select>
+      </div>
+      <div>
+        <label for="location_city">City</label>
+        <input id="location_city" name="location_city" required />
+      </div>
+      <div>
+        <span>Listing Type</span>
+        <label>
+          <input type="radio" name="listing_type" value="sale" required />
+          Sale
+        </label>
+        <label>
+          <input type="radio" name="listing_type" value="rental" required />
+          Rental
+        </label>
+      </div>
+      <div>
+        <label for="photos">Photos (up to 5)</label>
+        <input id="photos" name="photos" type="file" accept="image/*" multiple />
+        <small>Select up to five images.</small>
+      </div>
+      <button type="submit">Add Property</button>
+    </form>
+  </body>
+  </html>
+
+
+

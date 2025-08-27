@@ -6,6 +6,8 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import dbPool from "./db.js";
+import multer from "multer";
+import fs from "fs";
 import authMiddleware from "./authMiddleware.js";
 
 dotenv.config();
@@ -36,6 +38,22 @@ app.use(
 
 // Attach current user (if any) to res.locals for all routes
 app.use(authMiddleware);
+
+// File uploads (multer) configuration
+const uploadsDir = path.join(__dirname, "public", "uploads");
+if (!fs.existsSync(uploadsDir)) {
+  fs.mkdirSync(uploadsDir, { recursive: true });
+}
+const storage = multer.diskStorage({
+  destination: function (_req, _file, cb) {
+    cb(null, uploadsDir);
+  },
+  filename: function (_req, file, cb) {
+    const uniquePrefix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
+    cb(null, `${uniquePrefix}-${file.originalname}`);
+  }
+});
+const upload = multer({ storage });
 
 // Routes
 app.get("/", (req, res) => {
@@ -125,6 +143,88 @@ app.post("/signup", async (req, res) => {
       title: "Sign Up",
       error: error?.message || "An unexpected error occurred. Please try again."
     });
+  }
+});
+
+// Add Property routes
+app.get("/add-property", (req, res) => {
+  if (!req?.session?.userId) {
+    return res.redirect("/login");
+  }
+  return res.render("add-property", { title: "Add Property" });
+});
+
+app.post("/add-property", upload.array("photos", 5), async (req, res) => {
+  if (!req?.session?.userId) {
+    return res.redirect("/login");
+  }
+
+  const {
+    title,
+    description,
+    price,
+    area_sqm,
+    property_type,
+    location_city,
+    listing_type
+  } = req.body || {};
+
+  if (!title || !description || !price || !area_sqm || !property_type || !location_city || !listing_type) {
+    return res.status(400).render("add-property", {
+      title: "Add Property",
+      error: "All fields are required."
+    });
+  }
+
+  const userId = req.session.userId;
+  const files = Array.isArray(req.files) ? req.files : [];
+
+  let connection;
+  try {
+    connection = await dbPool.getConnection();
+    await connection.beginTransaction();
+
+    const insertPropertySql = `
+      INSERT INTO properties (owner_id, title, description, price, area_sqm, property_type, location_city, listing_type)
+      VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    `;
+    const [propertyResult] = await connection.execute(insertPropertySql, [
+      userId,
+      title,
+      description,
+      Number(price),
+      Number(area_sqm),
+      property_type,
+      location_city,
+      listing_type
+    ]);
+
+    const propertyId = propertyResult?.insertId;
+
+    if (Array.isArray(req.files) && req.files.length > 0) {
+      const insertImageSql = `
+        INSERT INTO property_images (property_id, image_url)
+        VALUES (?, ?)
+      `;
+      for (const file of req.files) {
+        const relativePath = `/uploads/${file.filename}`;
+        await connection.execute(insertImageSql, [propertyId, relativePath]);
+      }
+    }
+
+    await connection.commit();
+    return res.redirect("/");
+  } catch (error) {
+    if (connection) {
+      try { await connection.rollback(); } catch {}
+    }
+    console.error("Add property error:", error);
+    return res.status(500).render("add-property", {
+      title: "Add Property",
+      error: error?.message || "An unexpected error occurred. Please try again."
+    });
+  } finally {
+    if (connection) connection.release();
   }
 });
 

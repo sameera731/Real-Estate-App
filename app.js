@@ -6,6 +6,7 @@ import session from "express-session";
 import bodyParser from "body-parser";
 import bcrypt from "bcrypt";
 import dbPool from "./db.js";
+import authMiddleware from "./authMiddleware.js";
 
 dotenv.config();
 
@@ -32,6 +33,9 @@ app.use(
     cookie: { maxAge: 1000 * 60 * 60 }
   })
 );
+
+// Attach current user (if any) to res.locals for all routes
+app.use(authMiddleware);
 
 // Routes
 app.get("/", (req, res) => {

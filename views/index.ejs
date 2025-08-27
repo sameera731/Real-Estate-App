@@ -7,6 +7,15 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <nav>
+      <% if (user) { %>
+        <span>Welcome, <strong><%= user.username %></strong></span>
+        <a href="/logout">Logout</a>
+      <% } else { %>
+        <a href="/login">Login</a>
+        <a href="/signup">Sign Up</a>
+      <% } %>
+    </nav>
     <h1><%= title %></h1>
     <p>Welcome to your Express + EJS app.</p>
   </body>

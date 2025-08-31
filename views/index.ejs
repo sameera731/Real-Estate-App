@@ -179,8 +179,9 @@
     <nav>
       <div class="container">
         <div>
-          <% if (user) { %>
-            <span>Welcome, <strong><%= user.username %></strong></span>
+          <% if (locals.user && locals.user.username) { %>
+            <span>Welcome, <strong><%= locals.user.username %></strong></span>
+            <a href="/dashboard">Dashboard</a>
             <a href="/add-property">Add Property</a>
             <a href="/logout">Logout</a>
           <% } else { %>
@@ -192,10 +193,20 @@
     </nav>
     
     <div class="container">
+      <!-- Debug info -->
+      <% if (typeof locals !== 'undefined') { %>
+        <div style="background: #f0f0f0; padding: 10px; margin: 10px 0; border-radius: 5px; font-size: 12px;">
+          <strong>Debug Info:</strong><br>
+          locals.user: <%= typeof locals.user %><br>
+          locals.user.username: <%= locals.user && locals.user.username ? locals.user.username : 'undefined' %><br>
+          locals.user.id: <%= locals.user && locals.user.id ? locals.user.id : 'undefined' %>
+        </div>
+      <% } %>
+      
       <div class="header">
         <h1><%= title %></h1>
         <p>Discover amazing properties for sale and rent</p>
-        <% if (user) { %>
+        <% if (locals.user && locals.user.username) { %>
           <a href="/add-property" class="add-property-btn">+ Add New Property</a>
         <% } %>
       </div>
@@ -247,7 +258,7 @@
         <div class="no-properties">
           <% if (typeof properties !== 'undefined' && properties.length === 0) { %>
             <p>No properties available yet.</p>
-            <% if (user) { %>
+            <% if (locals.user && locals.user.username) { %>
               <p>Be the first to <a href="/add-property">add a property</a>!</p>
             <% } else { %>
               <p><a href="/signup">Sign up</a> or <a href="/login">log in</a> to add properties.</p>

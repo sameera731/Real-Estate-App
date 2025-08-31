@@ -83,10 +83,11 @@
   </head>
   <body>
     <nav style="background-color: #f8f9fa; padding: 15px 0; margin-bottom: 20px; border-bottom: 1px solid #dee2e6;">
-      <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
-        <a href="/" style="color: #007bff; text-decoration: none;">← Back to Home</a>
-        <a href="/logout" style="color: #007bff; text-decoration: none;">Logout</a>
-      </div>
+              <div style="max-width: 1200px; margin: 0 auto; padding: 0 20px; display: flex; justify-content: space-between; align-items: center;">
+          <a href="/" style="color: #007bff; text-decoration: none;">← Back to Home</a>
+          <a href="/dashboard" style="color: #007bff; text-decoration: none;">Dashboard</a>
+          <a href="/logout" style="color: #007bff; text-decoration: none;">Logout</a>
+        </div>
     </nav>
     <h1><%= title || 'Add Property' %></h1>
     <form id="propertyForm" action="/add-property" method="post" enctype="multipart/form-data" style="max-width: 600px; margin: 0 auto; padding: 20px;">

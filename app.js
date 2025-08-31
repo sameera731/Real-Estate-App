@@ -57,6 +57,9 @@ const upload = multer({ storage });
 
 // Routes
 app.get("/", async (req, res) => {
+  console.log("Home route - session userId:", req.session.userId);
+  console.log("Home route - res.locals.user:", res.locals.user);
+  
   try {
     // Fetch all properties with their associated images
     const selectPropertiesSql = `
@@ -92,15 +95,13 @@ app.get("/", async (req, res) => {
     
     res.render("index", { 
       title: "Home",
-      properties: properties,
-      user: req.user
+      properties: properties
     });
   } catch (error) {
     console.error("Error fetching properties:", error);
     res.render("index", { 
       title: "Home",
       properties: [],
-      user: req.user,
       error: "Failed to load properties"
     });
   }
@@ -207,6 +208,63 @@ app.get("/logout", (req, res) => {
     }
     res.redirect("/");
   });
+});
+
+app.get("/dashboard", async (req, res) => {
+  // Check if user is logged in
+  if (!req?.session?.userId) {
+    return res.redirect("/login");
+  }
+
+  console.log("Dashboard route - session userId:", req.session.userId);
+  console.log("Dashboard route - res.locals.user:", res.locals.user);
+
+  try {
+    const userId = req.session.userId;
+    
+    // Fetch properties owned by the current user
+    const selectPropertiesSql = `
+      SELECT 
+        p.id,
+        p.title,
+        p.description,
+        p.price,
+        p.area_sqm,
+        p.property_type,
+        p.location_city,
+        p.listing_type,
+        p.created_at
+      FROM properties p
+      WHERE p.owner_id = ?
+      ORDER BY p.created_at DESC
+    `;
+    
+    const [properties] = await dbPool.execute(selectPropertiesSql, [userId]);
+    
+    // Fetch images for each property
+    for (let property of properties) {
+      const selectImagesSql = `
+        SELECT image_url 
+        FROM property_images 
+        WHERE property_id = ?
+        ORDER BY id ASC
+      `;
+      const [images] = await dbPool.execute(selectImagesSql, [property.id]);
+      property.images = images.map(img => img.image_url);
+    }
+    
+    res.render("dashboard", { 
+      title: "My Dashboard",
+      properties: properties
+    });
+  } catch (error) {
+    console.error("Error fetching user properties:", error);
+    res.render("dashboard", { 
+      title: "My Dashboard",
+      properties: [],
+      error: "Failed to load your properties"
+    });
+  }
 });
 
 app.post("/add-property", upload.array("photos", 5), async (req, res) => {

@@ -56,8 +56,54 @@ const storage = multer.diskStorage({
 const upload = multer({ storage });
 
 // Routes
-app.get("/", (req, res) => {
-  res.render("index", { title: "Home" });
+app.get("/", async (req, res) => {
+  try {
+    // Fetch all properties with their associated images
+    const selectPropertiesSql = `
+      SELECT 
+        p.id,
+        p.title,
+        p.description,
+        p.price,
+        p.area_sqm,
+        p.property_type,
+        p.location_city,
+        p.listing_type,
+        p.created_at,
+        u.username as owner_name
+      FROM properties p
+      JOIN users u ON p.owner_id = u.id
+      ORDER BY p.created_at DESC
+    `;
+    
+    const [properties] = await dbPool.execute(selectPropertiesSql);
+    
+    // Fetch images for each property
+    for (let property of properties) {
+      const selectImagesSql = `
+        SELECT image_url 
+        FROM property_images 
+        WHERE property_id = ?
+        ORDER BY id ASC
+      `;
+      const [images] = await dbPool.execute(selectImagesSql, [property.id]);
+      property.images = images.map(img => img.image_url);
+    }
+    
+    res.render("index", { 
+      title: "Home",
+      properties: properties,
+      user: req.user
+    });
+  } catch (error) {
+    console.error("Error fetching properties:", error);
+    res.render("index", { 
+      title: "Home",
+      properties: [],
+      user: req.user,
+      error: "Failed to load properties"
+    });
+  }
 });
 
 app.get("/signup", (req, res) => {
@@ -152,6 +198,15 @@ app.get("/add-property", (req, res) => {
     return res.redirect("/login");
   }
   return res.render("add-property", { title: "Add Property" });
+});
+
+app.get("/logout", (req, res) => {
+  req.session.destroy((err) => {
+    if (err) {
+      console.error("Logout error:", err);
+    }
+    res.redirect("/");
+  });
 });
 
 app.post("/add-property", upload.array("photos", 5), async (req, res) => {

@@ -15,7 +15,7 @@ CREATE TABLE properties (
     description TEXT NOT NULL,
     price DECIMAL(10, 2) NOT NULL,
     area_sqm DECIMAL(10, 2) NOT NULL,
-    property_type ENUM('apartment', 'bungalow', 'story') NOT NULL,
+    property_type ENUM('apartment', 'house', 'land', 'commercial') NOT NULL,
     location_city VARCHAR(50) NOT NULL,
     listing_type ENUM('sale', 'rental') NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,

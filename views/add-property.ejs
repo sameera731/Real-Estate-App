@@ -5,10 +5,85 @@
     <meta name="viewport" content="width=device-width, initial-scale=1" />
     <title><%= title || 'Add Property' %></title>
     <link rel="stylesheet" href="/styles.css" />
+    <style>
+      .file-preview-container {
+        margin: 20px 0;
+        padding: 15px;
+        border: 2px dashed #ccc;
+        border-radius: 8px;
+        background-color: #f9f9f9;
+        min-height: 100px;
+      }
+      
+      .file-preview-item {
+        display: inline-block;
+        margin: 10px;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+        background-color: white;
+        position: relative;
+        max-width: 200px;
+      }
+      
+      .file-preview-item img {
+        max-width: 100%;
+        max-height: 150px;
+        border-radius: 3px;
+      }
+      
+      .file-preview-item .file-name {
+        font-size: 12px;
+        margin-top: 5px;
+        word-break: break-all;
+        text-align: center;
+      }
+      
+      .remove-file {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #ff4444;
+        color: white;
+        border: none;
+        border-radius: 50%;
+        width: 20px;
+        height: 20px;
+        cursor: pointer;
+        font-size: 12px;
+        line-height: 1;
+      }
+      
+      .file-input-container {
+        margin: 15px 0;
+      }
+      
+      .file-input-container input[type="file"] {
+        margin-bottom: 10px;
+      }
+      
+      .file-count {
+        color: #666;
+        font-size: 14px;
+        margin-top: 5px;
+      }
+      
+      .error-message {
+        color: #ff4444;
+        font-size: 14px;
+        margin-top: 5px;
+      }
+      
+      .success-message {
+        color: #44aa44;
+        font-size: 14px;
+        margin-top: 5px;
+      }
+    </style>
   </head>
   <body>
     <h1><%= title || 'Add Property' %></h1>
-    <form action="/add-property" method="post" enctype="multipart/form-data">
+    <form id="propertyForm" action="/add-property" method="post" enctype="multipart/form-data">
       <div>
         <label for="title">Title</label>
         <input id="title" name="title" required />
@@ -50,15 +125,224 @@
           Rental
         </label>
       </div>
-      <div>
+      <div class="file-input-container">
         <label for="photos">Photos (up to 5)</label>
-        <input id="photos" name="photos" type="file" accept="image/*" multiple />
-        <small>Select up to five images.</small>
+        <input id="photos" name="photos" type="file" accept="image/*" />
+        <small>Select images one at a time. You can add up to 5 images.</small>
+        <div class="file-count">Selected files: <span id="fileCount">0</span>/5</div>
+        <div id="fileError" class="error-message" style="display: none;"></div>
+        <div id="fileSuccess" class="success-message" style="display: none;"></div>
       </div>
+      
+      <div class="file-preview-container" id="filePreviewContainer">
+        <div id="noFilesMessage">No files selected. Click "Choose File" above to add images.</div>
+      </div>
+      
       <button type="submit">Add Property</button>
     </form>
+
+    <script>
+      // Global variables to store selected files
+      let selectedFiles = [];
+      const maxFiles = 5;
+      
+      // DOM elements
+      const fileInput = document.getElementById('photos');
+      const filePreviewContainer = document.getElementById('filePreviewContainer');
+      const noFilesMessage = document.getElementById('noFilesMessage');
+      const fileCount = document.getElementById('fileCount');
+      const fileError = document.getElementById('fileError');
+      const fileSuccess = document.getElementById('fileSuccess');
+      const form = document.getElementById('propertyForm');
+      
+      // File input change event handler
+      fileInput.addEventListener('change', function(event) {
+        const files = event.target.files;
+        if (files.length > 0) {
+          const file = files[0]; // Get the first file from the selection
+          
+          // Validate file type
+          if (!file.type.startsWith('image/')) {
+            showError('Please select an image file.');
+            return;
+          }
+          
+          // Validate file size (5MB limit)
+          if (file.size > 5 * 1024 * 1024) {
+            showError('File size must be less than 5MB.');
+            return;
+          }
+          
+          // Check if we already have the maximum number of files
+          if (selectedFiles.length >= maxFiles) {
+            showError(`Maximum ${maxFiles} files allowed.`);
+            return;
+          }
+          
+          // Check if file is already selected (by name and size)
+          const isDuplicate = selectedFiles.some(existingFile => 
+            existingFile.name === file.name && existingFile.size === file.size
+          );
+          
+          if (isDuplicate) {
+            showError('This file is already selected.');
+            return;
+          }
+          
+          // Add file to selected files array
+          selectedFiles.push(file);
+          
+          // Update UI
+          updateFileDisplay();
+          showSuccess('File added successfully!');
+          
+          // Clear the input to allow selecting the same file again if needed
+          fileInput.value = '';
+        }
+      });
+      
+      // Function to update file display
+      function updateFileDisplay() {
+        // Update file count
+        fileCount.textContent = selectedFiles.length;
+        
+        // Show/hide no files message
+        if (selectedFiles.length === 0) {
+          noFilesMessage.style.display = 'block';
+        } else {
+          noFilesMessage.style.display = 'none';
+        }
+        
+        // Clear existing previews
+        const existingPreviews = filePreviewContainer.querySelectorAll('.file-preview-item');
+        existingPreviews.forEach(preview => preview.remove());
+        
+        // Create preview for each selected file
+        selectedFiles.forEach((file, index) => {
+          const previewItem = document.createElement('div');
+          previewItem.className = 'file-preview-item';
+          
+          // Create remove button
+          const removeBtn = document.createElement('button');
+          removeBtn.className = 'remove-file';
+          removeBtn.innerHTML = '×';
+          removeBtn.onclick = () => removeFile(index);
+          
+          // Create image preview
+          const img = document.createElement('img');
+          img.src = URL.createObjectURL(file);
+          img.alt = file.name;
+          
+          // Create file name display
+          const fileName = document.createElement('div');
+          fileName.className = 'file-name';
+          fileName.textContent = file.name.length > 20 ? file.name.substring(0, 20) + '...' : file.name;
+          
+          // Assemble preview item
+          previewItem.appendChild(removeBtn);
+          previewItem.appendChild(img);
+          previewItem.appendChild(fileName);
+          
+          // Add to container
+          filePreviewContainer.appendChild(previewItem);
+        });
+      }
+      
+      // Function to remove a file
+      function removeFile(index) {
+        selectedFiles.splice(index, 1);
+        updateFileDisplay();
+        showSuccess('File removed successfully!');
+      }
+      
+      // Function to show error message
+      function showError(message) {
+        fileError.textContent = message;
+        fileError.style.display = 'block';
+        fileSuccess.style.display = 'none';
+        
+        // Hide error after 3 seconds
+        setTimeout(() => {
+          fileError.style.display = 'none';
+        }, 3000);
+      }
+      
+      // Function to show success message
+      function showSuccess(message) {
+        fileSuccess.textContent = message;
+        fileSuccess.style.display = 'block';
+        fileError.style.display = 'none';
+        
+        // Hide success after 2 seconds
+        setTimeout(() => {
+          fileSuccess.style.display = 'none';
+        }, 2000);
+      }
+      
+      // Form submission handler
+      form.addEventListener('submit', function(event) {
+        event.preventDefault();
+        
+        // Validate that we have at least one file
+        if (selectedFiles.length === 0) {
+          showError('Please select at least one image file.');
+          return;
+        }
+        
+        // Create FormData object
+        const formData = new FormData();
+        
+        // Add all form fields
+        const formElements = form.elements;
+        for (let i = 0; i < formElements.length; i++) {
+          const element = formElements[i];
+          if (element.name && element.name !== 'photos') {
+            if (element.type === 'radio') {
+              if (element.checked) {
+                formData.append(element.name, element.value);
+              }
+            } else if (element.type === 'checkbox') {
+              if (element.checked) {
+                formData.append(element.name, element.value);
+              }
+            } else {
+              formData.append(element.name, element.value);
+            }
+          }
+        }
+        
+        // Add all selected files
+        selectedFiles.forEach((file, index) => {
+          formData.append('photos', file);
+        });
+        
+        // Submit the form
+        fetch('/add-property', {
+          method: 'POST',
+          body: formData
+        })
+        .then(response => {
+          if (response.ok) {
+            showSuccess('Property added successfully!');
+                // Redirect to home page after a short delay
+                setTimeout(() => {
+                    window.location.href = '/';
+                }, 1500);
+          } else {
+            throw new Error('Failed to add property');
+          }
+        })
+        .catch(error => {
+          console.error('Error:', error);
+          showError('Failed to add property. Please try again.');
+        });
+      });
+      
+      // Initialize display
+      updateFileDisplay();
+    </script>
   </body>
-  </html>
+</html>
 
 
 
